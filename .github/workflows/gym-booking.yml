@@ -27,20 +27,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y chromium-browser
           
-      - name: Run booking script
+      - name: Run booking script with debugging
         env:
           GYM_USERNAME: ${{ secrets.GYM_USERNAME }}
           GYM_PASSWORD: ${{ secrets.GYM_PASSWORD }}
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
-        run: node booking-script.js
-        
+          DEBUG: "puppeteer:*"
+        run: |
+          echo "Starting booking script..."
+          node booking-script.js
+          echo "Script execution completed with exit code: $?"
+          ls -la
+          
       - name: Upload screenshots (if any)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: booking-results
           path: |
-            booking-result.png
-            error-screenshot.png
+            *.png
           retention-days: 7
-
