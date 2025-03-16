@@ -1,0 +1,46 @@
+name: Automated Gym Booking
+
+on:
+  schedule:
+    # Run at 11:58 PM UTC (adjust for your timezone)
+    - cron: '58 23 * * *'
+  workflow_dispatch:  # Allows manual triggering for testing
+
+jobs:
+  book-gym-session:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Install Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+          
+      - name: Run booking script
+        env:
+          GYM_USERNAME: ${{ secrets.GYM_USERNAME }}
+          GYM_PASSWORD: ${{ secrets.GYM_PASSWORD }}
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+        run: node booking-script.js
+        
+      - name: Upload screenshots (if any)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: booking-results
+          path: |
+            booking-result.png
+            error-screenshot.png
+          retention-days: 7
+
