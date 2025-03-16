@@ -106,14 +106,38 @@ async function bookGymSession() {
 
     console.log("Login successful! Navigating to booking page...")
 
-    // Navigate to the booking page (you'll need to find the correct URL)
-    await page.goto("https://sportspark.leisurecloud.net/Connect/mrmbooking.aspx", {
+    // Navigate to the booking page
+    await page.goto("https://sportspark.leisurecloud.net/Connect/mrmselectActivityGroup.aspx", {
       waitUntil: "networkidle2",
       timeout: 60000,
     })
 
-    console.log("On booking page, looking for available sessions...")
+    console.log("On booking page, looking for activity...")
 
+    // =============
+    
+    // Example: Find a session by its text content
+    const sessionSelector = await page.evaluate(() => {
+      // Look for elements containing the session name
+      const elements = Array.from(document.querySelectorAll("a, button, div"))
+      const sessionElement = elements.find((el) => el.textContent.includes("Group Exercise Classes"))
+      return sessionElement ? sessionElement.id || sessionElement.className : null
+    })
+
+    if (!sessionSelector) {
+      throw new Error("Session not found on booking page")
+    }
+
+    console.log(`Found Group Exercise Classes page...`)
+
+    // Click on the session
+    await page.click(`#${sessionSelector}`)
+
+    // Wait for booking confirmation page
+    await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 })
+
+    // =============
+    
     // Here you would add the specific logic to:
     // 1. Find the session you want to book
     // 2. Click on it
