@@ -26,24 +26,91 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser
+          echo "Chromium installed at: $(which chromium-browser)"
           
-      - name: Run booking script with debugging
+      - name: Run debug test script
+        env:
+          GYM_USERNAME: ${{ secrets.GYM_USERNAME }}
+          GYM_PASSWORD: ${{ secrets.GYM_PASSWORD }}
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+        run: |
+          echo "Starting debug test..."
+          node debug-test.js
+          echo "Debug test completed with exit code: $?"
+          
+      - name: Run minimal browser test
         env:
           GYM_USERNAME: ${{ secrets.GYM_USERNAME }}
           GYM_PASSWORD: ${{ secrets.GYM_PASSWORD }}
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
           DEBUG: "puppeteer:*"
         run: |
-          echo "Starting booking script..."
-          node booking-script.js
-          echo "Script execution completed with exit code: $?"
+          echo "Creating minimal browser test script..."
+          cat > minimal-test.js << 'EOL'
+          const puppeteer = require('puppeteer-extra');
+          const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+          const fs = require('fs');
+          
+          puppeteer.use(StealthPlugin());
+          
+          (async () => {
+            console.log('Starting minimal browser test...');
+            let browser;
+            
+            try {
+              console.log('Launching browser...');
+              browser = await puppeteer.launch({
+                headless: true,
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+              });
+              
+              console.log('Browser launched successfully');
+              
+              const page = await browser.newPage();
+              console.log('New page created');
+              
+              console.log('Navigating to example.com...');
+              await page.goto('https://example.com', { 
+                waitUntil: 'networkidle2',
+                timeout: 30000
+              });
+              
+              console.log('Page loaded, taking screenshot...');
+              await page.screenshot({ path: 'example.png' });
+              
+              console.log('Screenshot taken, checking if file exists...');
+              if (fs.existsSync('example.png')) {
+                console.log('Screenshot file exists');
+              } else {
+                console.log('Screenshot file does NOT exist');
+              }
+              
+              console.log('Test completed successfully');
+            } catch (error) {
+              console.error('Test failed:', error);
+            } finally {
+              if (browser) {
+                console.log('Closing browser...');
+                await browser.close();
+                console.log('Browser closed');
+              }
+            }
+          })();
+          EOL
+          
+          echo "Running minimal browser test..."
+          node minimal-test.js
+          echo "Minimal test completed with exit code: $?"
           ls -la
           
-      - name: Upload screenshots (if any)
+      - name: Upload any generated files
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: booking-results
+          name: test-results
           path: |
             *.png
+            *.txt
           retention-days: 7
+
